@@ -1,0 +1,29 @@
+{% if release_name == 'master' %}
+{% set dir = '/dashboard-new/' %}
+{% elif release_name == 'testing' %}
+{% set dir = '/dashboard-testing/' %}
+{% endif %}
+
+module.exports = {
+    publicPath: '{{ dir }}',
+    devServer: {
+        inline: true,
+        host: 'localhost',
+        port: 80
+    },
+    configureWebpack: {
+        performance: { hints: false },
+        output: {
+            filename: "[hash].[name].js",
+            chunkFilename: "js/[chunkhash].[name].module.js"
+        }
+    },
+    productionSourceMap: false,
+    pwa: {
+        name: 'Skyservice POS',
+        themeColor: '#4c9cba',
+        msTileColor: '#000000',
+        appleMobileWebAppCapable: 'yes',
+        appleMobileWebAppStatusBarStyle: 'black'
+    }
+}

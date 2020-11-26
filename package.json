@@ -1,0 +1,84 @@
+{
+    "name": "skyservice",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "vue-cli-service serve",
+        "build": "vue-cli-service build",
+        "lint": "vue-cli-service lint"
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-svg-core": "^1.2.28",
+        "@fortawesome/free-solid-svg-icons": "^5.13.0",
+        "@fortawesome/vue-fontawesome": "^0.1.9",
+        "axios": "^0.19.2",
+        "babel-plugin-file-loader": "^1.1.1",
+        "bootstrap": "^4.3.1",
+        "bootstrap-vue": "^2.0.0-rc.27",
+        "core-js": "^2.6.5",
+        "country-language": "^0.1.7",
+        "font-awesome": "^4.7.0",
+        "get-user-locale": "^1.4.0",
+        "glyphicons": "^0.2.0",
+        "portal-vue": "^2.1.5",
+        "vue": "^2.6.10",
+        "vue-click-outside": "^1.1.0",
+        "vue-clipboard2": "^0.3.1",
+        "vue-constants": "^1.0.3",
+        "vue-cookies": "^1.5.13",
+        "vue-country-flag": "^1.2.3",
+        "vue-flag-icon": "^1.0.6",
+        "vue-i18n": "^8.12.0",
+        "vue-languages-dropdown": "^1.0.16",
+        "vue-native-websocket": "^2.0.14",
+        "vue-swatches": "^1.0.4",
+        "vue-tel-input": "^3.0.0",
+        "vuejs-localization": "^1.0.3",
+        "vuex": "^3.1.1",
+        "vue-ripple-directive": "^2.0.1"
+    },
+    "devDependencies": {
+        "@babel/preset-env": "^7.5.5",
+        "@vue/cli-plugin-babel": "^3.9.0",
+        "@vue/cli-plugin-eslint": "^3.9.0",
+        "@vue/cli-service": "^3.9.0",
+        "babel-core": "^6.26.3",
+        "babel-eslint": "^10.0.1",
+        "babel-loader": "^8.0.6",
+        "babel-preset-env": "^1.7.0",
+        "css-loader": "^3.2.0",
+        "eslint": "^5.16.0",
+        "eslint-plugin-vue": "^5.0.0",
+        "file-loader": "^4.1.0",
+        "node-sass": "^4.12.0",
+        "sass-loader": "^7.1.0",
+        "style-loader": "^1.0.0",
+        "vue-devtools": "^5.1.0",
+        "vue-template-compiler": "^2.6.10",
+        "webpack": "^4.39.1"
+    },
+    "eslintConfig": {
+        "root": true,
+        "env": {
+            "node": true
+        },
+        "extends": [
+            "plugin:vue/essential",
+            "eslint:recommended"
+        ],
+        "rules": {},
+        "parserOptions": {
+            "parser": "babel-eslint"
+        }
+    },
+    "postcss": {
+        "plugins": {
+            "autoprefixer": {}
+        }
+    },
+    "browserslist": [
+        "> 1%",
+        "last 2 versions",
+        "not ie <= 8"
+    ]
+}

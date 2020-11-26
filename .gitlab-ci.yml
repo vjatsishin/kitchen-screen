@@ -1,0 +1,54 @@
+stages:
+  - build
+  - deploy
+
+compile:
+  stage: build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - dist
+  script:
+    - ansible-playbook /etc/ansible/sky/playbooks/online/main.yml -e release_name=$CI_COMMIT_REF_NAME -e prj_dir=$CI_PROJECT_DIR --tags "config"
+    - npm install --progress=false
+    - npm run build
+    - zip -r /home/gitlab-runner/builds/artifacts.zip dist/
+  only:
+    - master
+    - testing
+    
+#lint_deploy_playbook:
+#  stage: deploy
+#  script:
+#    - ansible-lint /etc/ansible/sky/playbooks/online/main.yml
+#  only:
+#    refs:
+#      - master    
+
+deploy_app:
+  stage: deploy
+  environment: production
+#  before_script:
+#    - 'curl --location --output /home/gitlab-runner/builds/artifacts.zip "http://srv.skyservice.pro/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/master/download?job=build_app&private_token=$ci_token"'
+#    - 'curl --location --output /home/gitlab-runner/builds/artifacts.zip --header "PRIVATE-TOKEN: $ci_token" "http://srv.skyservice.pro/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/master/download?job=compile"'
+  script:
+    - ansible-playbook /etc/ansible/sky/playbooks/online/main.yml -e release_name=$CI_COMMIT_REF_NAME --tags "deploy"
+  after_script:
+    - rm -rf *
+    - rm -f /home/gitlab-runner/builds/artifacts.zip
+  only:
+    - master
+
+deploy_app_testing:
+  stage: deploy
+  environment: testing
+#  before_script:
+#    - 'curl --location --output /home/gitlab-runner/builds/artifacts.zip "http://srv.skyservice.pro/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=build_app&#private_token=$ci_token"'
+  script:
+    - ansible-playbook /etc/ansible/sky/playbooks/online/main.yml -e release_name=$CI_COMMIT_REF_NAME --tags "deploy"
+  after_script:
+    - rm -rf *
+    - rm -f /home/gitlab-runner/builds/artifacts.zip
+  only:
+    refs:
+     - testing

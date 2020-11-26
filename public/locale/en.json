@@ -1,0 +1,20 @@
+{
+    "log_in": "Log in",
+    "login": "Login",
+    "password": "Password",
+    "auth": "Auth",
+    "noauth": "No authorized",
+    "invalidphone": "Invalid phone",
+    "unregister": "Unregistered",
+    "invalidpass": "Invalid password",
+    "loading": "Loading",
+    "success": "Success",
+    "settings": "Settings",
+    "display_mode": "Display mode",
+    "cooking_done": "Cooking & Done",
+    "cooking": "Cooking",
+    "done": "Done",
+    "save": "Save",
+    "user": "User:",
+    "log_out": "Log out"
+}

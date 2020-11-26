@@ -1,0 +1,20 @@
+{
+    "log_in": "Login",
+    "login": "Login",
+    "password": "Contraseña",
+    "auth": "Auth",
+    "noauth": "No autorizado",
+    "invalidphone": "Contraseña incorrecta",
+    "unregister": "No registrado",
+    "invalidpass": "Contraseña incorrecta",
+    "loading": "Cargando",
+    "success": "Éxito",
+    "settings": "Ajustes",
+    "display_mode": "Modo de visualización",
+    "cooking_done": "Cocina & Hecho",
+    "cooking": "Preparación",
+    "done": "Hecho",
+    "save": "Guardar",
+    "user": "Usuario:",
+    "log_out": "Cerrar sesión"
+}
