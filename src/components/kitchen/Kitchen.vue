@@ -1,396 +1,200 @@
 <template>
   <div class="kitchen-background">
-    <template v-if="!isHistory">
-      <template v-for="(item, index) in orders">
-        <div class="order-table" :key="index + '1'">{{item.table}}</div>
-        <div class="order" :key="index + '2'">
-          <template v-for="(item2, index2) in item.products">
-            <!-- <div class="inline-flex"> -->
-              <div class="product-row" :key="index2">
-                <div class="product">
-                  <div class="product-main" v-ripple="'rgba(255, 255, 255, 0.25)'" @click="onProductClick(item2)">
-                    <div class="product-main-item">
-                      <div class="product-main-item-description">Время</div>
-                      <div class="product-time">{{item2.time}}</div>
+    <template>
+      <div class="order-table" v-for="(order, index) in orders" :key="index + '1'">
+        <div class="order-table" v-if="!!order.table">Замовлення: {{ order.orderId }} - {{order.table}}</div>
+        <div class="order-table" v-else>Замовлення: {{ order.orderId }} </div>
+        <div class="order">
+          <div v-for="(group, gIndex) in order.productGroups" :key="gIndex + '2'">
+            <div v-for="(product, pIndex) in group.products" :key="pIndex">
+              <!-- <div class="inline-flex"> -->
+                <div class="product-row">
+                  <div class="product">
+                    <div class="product-main" v-ripple="'rgba(255, 255, 255, 0.25)'" @click="onProductClick(order.orderId, product)">
+                      <!-- <div class="product-main-item">
+                        <div class="product-main-item-description">Час</div>
+                        <div class="product-time">{{product.time}}</div>
+                      </div> -->
+                      <div class="product-main-name">
+                        <!-- <div class="product-main-item-description">Назва</div> -->
+                        <div class="product-name">{{product.name}}</div>
+                      </div>
+                      <!-- <div class="product-main-item" v-if="product.cookingTime">
+                        <div class="product-main-item-description">Залишковий час</div>
+                        <div class="product-clock">00:35</div>
+                      </div> -->
                     </div>
-                    <div class="product-main-name">
-                      <div class="product-main-item-description">Наименование</div>
-                      <div class="product-name">{{item2.name}}</div>
-                    </div>
-                    <!-- <div class="product-main-item" v-if="item2.cookingTime">
-                      <div class="product-main-item-description">Остаточное время</div>
-                      <div class="product-clock">00:35</div>
-                    </div> -->
+                    <div v-if="product.status == 'NEW'" class="product-btn-new" @click="setProductStatus(order.orderId, product.uniqueId, 'PREPARE')">Новий</div>
+                    <div v-else-if="product.status == 'PREPARE'" class="product-btn-cooking" @click="setProductStatus(order.orderId, product.uniqueId, 'READY')">Готується</div>
+                    <div v-else-if="product.status == 'READY'" class="product-btn-ready" @click="setProductStatus(order.orderId, product.uniqueId, 'DONE')">Готово</div>
+                    <div v-else-if="product.status == 'DONE'" class="product-btn-done">Забрали</div>
                   </div>
-                  <div v-if="item2.status == 'new'" class="product-btn-cooking">Готовить</div>
-                  <div v-else-if="item2.status == 'cooking'" class="product-btn-done">Готово</div>
-                </div>
-                <div style="width: 100px;">
-                  <div class="product-clock2" v-if="item2.cookingTime">00:35</div>
+                  <!-- <div style="width: 100px;">
+                    <div class="product-clock2" v-if="product.cookingTime">00:35</div>
+                  </div> -->
                 </div>
               </div>
-          </template>
-        </div>
-      </template>
-    </template>
-    <template v-else-if="isHistory">
-      <template v-for="(item, index) in historyOrders">
-        <div class="order-table" :key="index + '1'">{{item.table}}</div>
-          <div class="order" :key="index + '2'">
-          <div class="product-history" v-for="(item2, index2) in item.products" :key="index2">
-            <!-- <div class="inline-flex"> -->
-              <div class="product-history-main" v-ripple="'rgba(255, 255, 255, 0.25)'" @click="onProductClick(item2)">
-                <div class="product-main-item">
-                  <div class="product-main-item-description">Время</div>
-                  <div class="product-time">{{item2.time}}</div>
-                </div>
-                <div class="product-history-main-name">
-                  <div class="product-main-item-description">Наименование</div>
-                  <div class="product-name">{{item2.name}}</div>
-                </div>
-              </div>
+              <div v-if="order.productGroups.length - 1 > gIndex" class="group-line"></div>
           </div>
         </div>
-      </template>
+      </div>
     </template>
-    <ProductView v-if="isProductView" :product="selectedProductItem" @onClose="isProductView = false" />
+    <ProductView v-if="isProductView" 
+      :orderId="slectedOrderId"
+      :product="selectedProductItem" 
+      @onClose="isProductView = false" 
+      @onStatus="(obj) => setProductStatus(obj.orderId, obj.uniqueId, obj.status)" />
   </div>
 </template>
 
 <script>
-import axios from 'axios';
-import { store } from "@/store/store.js";
+
+import SockJS from "sockjs-client";
+import Stomp from "webstomp-client";
 import ProductView from "@/components/kitchen/ProductView"
+
+let stompClient = null;
+
 export default {
   components:{
     ProductView,
   },
+  computed: {
+    // isHistory() {
+    //   return store.isHistory;
+    // }
+  },
+  methods: {
+    onProductClick(orderId, product) {
+      this.slectedOrderId = orderId;
+      this.selectedProductItem = product;
+      this.isProductView = true;
+    }, 
+    connect() {
+      let $this = this;
+      var socket = new SockJS('http://localhost:8082/inner-ws');
+      stompClient = Stomp.over(socket);
+      stompClient.connect({}, function (frame) {
+        stompClient.subscribe('/terminal-topic', function (request) {
+          console.log("request", request)
+          let reqObj = JSON.parse(request.body);
+          console.log("reqObj", reqObj)
+          switch(reqObj.command) {
+            case "ADD_ORDER": {
+              let order = reqObj.order;
+              $this.orders[order.orderId] = order;
+              $this.$forceUpdate();
+              break;
+            }
+            case "SET_PRODUCT_STATUS": {
+              let changeStatus = reqObj.changeStatus
+              let orderId = changeStatus.orderId;
+              let uniqueProductId = changeStatus.uniqueProductId;
+              let status = changeStatus.status;
+              let order = $this.orders[orderId];
+              let isOrderDone = true;
+              order.productGroups.forEach(function(group, gIndex) {
+                group.products.forEach(function(product, pIndex) {
+                  if(product.uniqueId == uniqueProductId) {
+                    order.productGroups[gIndex].products[pIndex].status = status;
+                  }
+                  if(order.productGroups[gIndex].products[pIndex].status != "DONE") {
+                    isOrderDone = false;
+                  }
+                })
+              });
+              if(!isOrderDone) {
+                $this.orders[orderId] = order;
+              } else {
+                delete $this.orders[orderId];
+              }
+              $this.$forceUpdate();
+              break;
+            }
+            case "CANCEL_ORDER": {
+              let orderId = reqObj.orderId
+              delete $this.orders[orderId];
+              $this.$forceUpdate();
+              break;
+            }
+            case "CANCEL_PRODUCT": {
+              let changeStatus = reqObj.changeStatus
+              let orderId = changeStatus.orderId;
+              let uniqueProductId = changeStatus.uniqueProductId;
+              let order = $this.orders[orderId];
+              order.productGroups.forEach(function(group, gIndex) {
+                group.products.forEach(function(product, pIndex) {
+                  if(product.uniqueId == uniqueProductId) {
+                    // delete order.productGroups[gIndex].products[pIndex];
+                    order.productGroups[gIndex].products.splice(pIndex, 1);
+                  }
+                })
+              });
+              $this.orders[orderId] = order;
+              console.log($this.orders)
+              $this.$forceUpdate();
+              break;
+            }
+          }
+        });
+      });
+    },
+    cancelOrder(orderId) {
+      //todo
+    },
+    cancelProduct(orderId, uniqueId) {
+      //todo
+    },
+    setProductStatus(orderId, uniqueId, status) {
+      console.log("setProductStatus", orderId, uniqueId, status)
+      let order = this.orders[orderId];
+      let isOrderDone = true;
+      order.productGroups.forEach(function(group, gIndex) {
+        group.products.forEach(function(product, pIndex) {
+          if(product.uniqueId == uniqueId) {
+            order.productGroups[gIndex].products[pIndex].status = status;
+          }
+          if(order.productGroups[gIndex].products[pIndex].status != "DONE") {
+            isOrderDone = false;
+          }
+        })
+      });
+      if(!isOrderDone) {
+        this.orders[orderId] = order;
+      } else {
+        delete this.orders[orderId];
+      }
+      this.$forceUpdate();
+
+      stompClient.send("/kitchen-screen/terminal/setProductStatus", JSON.stringify({
+          'orderId': orderId,
+          'uniqueProductId': uniqueId,
+          'status': status
+      }), {})
+    }
+  },
+  mounted() {
+    this.connect()
+  },
   data(){
     return {
       isProductView: false,
+      slectedOrderId: "",
       selectedProductItem: {},
-      orders: [
-        {
-          uuid: "", //уникальный id заказа в формате uuid
-          name: "",
-          time: "",
-          date: "",
-          table: "Стол: 22",
-          products: [
-            {
-              name: "Семечки",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "",
-              modifiers: [
-                {
-                  name:"лушпайки",
-                  net:"200",
-                  gross:"200",
-                },
-                {
-                  name:"сердцевинка",
-                  net:"200",
-                  gross:"200",
-                },
-              ],
-              compositions: [],
-              reciept: "fahfdsfhs;dfh ыфвар ывфа выарфы в ашрывжватв dsfh dsaf sf sdafh sdfh h fdpdshfpsahfpsd hfpsdfh sfphs dfhs sh fsdhsdfsdhf shf spfh sdfh spfh  spfjd dfs jfdsofjsdlfjdsof jsofdj sdof  osdjf [osdfj ds[j sd[ аарп мшвы яанрпйц хрпючят  мялоыви я выз шаявызш вызщар выз вашз   азпв азптвап",
-            },
-            {
-              name: "Пива",
-              status: "cooking", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "148822555",
-              modifiers: [],
-              compositions: [],
-            },
-          ]
-        },
-        {
-          uuid: "", //уникальный id заказа в формате uuid
-          name: "",
-          time: "",
-          date: "",
-          table: "Стол: 44",
-          products: [
-            {
-              name: "Грінки Флінт",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Сухарики ыфва авыф авыоа тав пы в а выаоы вташ ва шов",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-          ]
-        },
-        {
-          uuid: "", //уникальный id заказа в формате uuid
-          name: "",
-          time: "",
-          date: "",
-          table: "Стол: 44",
-          products: [
-            {
-              name: "Торт Наполеон",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:45",
-              cookingTime: "",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-          ]
-        },
-      ],
-
-      historyOrders: [
-        {
-          uuid: "", //уникальный id заказа в формате uuid
-          name: "",
-          time: "",
-          date: "",
-          table: "Стол: 22",
-          products: [
-            {
-              name: "Семечки",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "",
-              modifiers: [
-                {
-                  name:"лушпайки",
-                  net:"200",
-                  gross:"200",
-                },
-                {
-                  name:"сердцевинка",
-                  net:"200",
-                  gross:"200",
-                },
-              ],
-              compositions: [],
-              reciept: "fahfdsfhs;dfh ыфвар ывфа выарфы в ашрывжватв dsfh dsaf sf sdafh sdfh h fdpdshfpsahfpsd hfpsdfh sfphs dfhs sh fsdhsdfsdhf shf spfh sdfh spfh  spfjd dfs jfdsofjsdlfjdsof jsofdj sdof  osdjf [osdfj ds[j sd[ аарп мшвы яанрпйц хрпючят  мялоыви я выз шаявызш вызщар выз вашз   азпв азптвап",
-            },
-            {
-              name: "Пива",
-              status: "cooking", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "148822555",
-              modifiers: [],
-              compositions: [],
-            },
-          ]
-        },
-        {
-          uuid: "", //уникальный id заказа в формате uuid
-          name: "",
-          time: "",
-          date: "",
-          table: "Стол: 44",
-          products: [
-            {
-              name: "Грінки Флінт",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Сухарики ыфва авыф авыоа тав пы в а выаоы вташ ва шов f f f f",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:26",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-          ]
-        },
-        {
-          uuid: "", //уникальный id заказа в формате uuid
-          name: "",
-          time: "",
-          date: "",
-          table: "Стол: 44",
-          products: [
-            {
-              name: "Торт Наполеон",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:45",
-              cookingTime: "",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-            {
-              name: "Бисквит",
-              status: "new", //статус приготовления продукта (new || cooking || done)
-              time: "15:46",
-              cookingTime: "228",
-              modifiers: [],
-              compositions: [],
-            },
-          ]
-        },
-      ],
+      orders: {}
     }
-  },
-  computed: {
-    isHistory() {
-      return store.isHistory;
-    }
-  },
-  methods: {
-    // getFormatedTime(sec) {
-    //   var hours = Math.floor(sec / 60);
-    //   var minutes = Math.floor(sec) - (hours * 60);
-    //   var seconds = Math.floor(sec) - (hours * 60) - (minutes * 60);
-    //   if(hours > 0) {
-    //     return hours + ":" + minutes + ":" + seconds;
-    //   } else {
-    //     return minutes + ":" + seconds;
-    //   }
-    // },
-    // getFormatedTime(ms) {
-    //   if(ms) {
-    //     var today = new Date(parseInt(ms));
-    //     var h = today.getHours();
-    //     var m = today.getMinutes();
-    //     var s = today.getSeconds();
-    //     console.log("h", h)
-    //     console.log("m", m)
-    //     console.log("s", s)
-    //     return h > 0 ? h + ":" : "" + m + ":" + s;
-    //   }
-    // },
-    onProductClick(item) {
-      this.selectedProductItem = item;
-      this.isProductView = true;
-    }
-  },
+  }
 }
 </script>
 
 <style scoped lang="scss">
+
+.group-line {
+    border-bottom: 2px dashed gray;
+    margin: auto;
+    margin-bottom: 7px;
+    width: 99%;
+}
 
 .kitchen-background {
   // background:  #707070;
@@ -412,15 +216,15 @@ export default {
 }
 
 .order-table {
-  height: 16px;
+  // height: 16px;
   // width:650px;
   max-width:650px;
   min-width:500px;
   line-height: 16px;
-  font-size: 12px;
+  font-size: 13px;//12
   // color: #404040;
   color: var(--main-background-product-description);
-  margin: auto;
+  margin: 0 auto 2px;
   padding: 0 16px;
 }
 
@@ -559,7 +363,7 @@ export default {
   background: #eeb509;
 }
 
-.product-btn-done {
+.product-btn-ready {
   width: 120px;
   height: 46px;
   line-height: 46px; 
@@ -568,8 +372,29 @@ export default {
   border-radius: 0 3px 3px 0;
 }
 
-.product-btn-done:hover {
+.product-btn-ready:hover {
   background: #26883d;
+}
+
+.product-btn-new {
+  width: 120px;
+  height: 46px;
+  line-height: 46px; 
+  color:white;
+  background: #283ba7;
+  border-radius: 0 3px 3px 0;
+}
+
+.product-btn-new:hover {
+  background: #265288;
+}
+
+.product-btn-done {
+  width: 120px;
+  height: 46px;
+  line-height: 46px; 
+  color: gray;
+  border-radius: 0 3px 3px 0;
 }
 
 .product-clock2 {

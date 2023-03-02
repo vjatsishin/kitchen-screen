@@ -18,6 +18,10 @@
           </template>
         </div>
 
+        <!-- <div @click="sendTestJson()">
+          send test json
+        </div> -->
+
         <div class="hat-right">
           <div class="hat-dark-light" @click="changeTheme()">
             <div class="hat-dark-light-img"/>
@@ -56,6 +60,10 @@
   import { languages } from './locale/index.js'
 
   const vm = new Vue()
+
+  // const ws1 = new WebSocket('ws://localhost:8082/inner-ws');
+
+  var stompClient = null;
 
   export default {
     components: {
@@ -96,24 +104,7 @@
       this.getCurrentTime();
     },
     mounted(){
-      var $this = this;
-      if(this.isServer) {
-        // this.getMyIP();
-        // this.enableSkySocket(true);
-      } else {
-        if(!this.serversIP || this.serversIP == "") {
-
-        } else {
-          vm.$connect('ws://' + this.serversIP + ":3382", {
-            store: store,
-            connectManually: true,
-            reconnection: true, // (Boolean) whether to reconnect automatically (false)
-            // reconnectionAttempts: 5, // (Number) number of reconnection attempts before giving up (Infinity),
-            reconnectionDelay: 3000, // (Number) how long to initially wait before attempting a new (1000)
-            format: 'json',
-          });
-        }
-      }
+      // var $this = this;
     },
     computed: {
       isHistory() {
@@ -121,6 +112,10 @@
       }
     },
     methods:{
+      // sendTestJson() {
+      //   // ws1.send(JSON.stringify({'command':'cancel_order'}))
+      //   stompClient.send("/kitchen-screen/terminal/cancel", {}, "1");
+      // },
       changeTheme() {
         if(this.currentTheme == "dark") {
           this.currentTheme = "light"
@@ -140,6 +135,7 @@
           document.documentElement.style.setProperty('--main-icon-history', getComputedStyle(document.documentElement).getPropertyValue('--icon-history-light'));
           document.documentElement.style.setProperty('--main-icon-order', getComputedStyle(document.documentElement).getPropertyValue('--icon-list-light'));
           document.documentElement.style.setProperty('--main-icon-sun-moon', getComputedStyle(document.documentElement).getPropertyValue('--icon-moon-light'));
+          document.documentElement.style.setProperty('--main-icon-close', getComputedStyle(document.documentElement).getPropertyValue('--icon-close-light'));
           document.documentElement.style.setProperty('--main-shadow', getComputedStyle(document.documentElement).getPropertyValue('--shadow-dark'));
           
         } else {//light
@@ -152,19 +148,19 @@
           document.documentElement.style.setProperty('--main-icon-history', getComputedStyle(document.documentElement).getPropertyValue('--icon-history-dark'));
           document.documentElement.style.setProperty('--main-icon-order', getComputedStyle(document.documentElement).getPropertyValue('--icon-list-dark'));
           document.documentElement.style.setProperty('--main-icon-sun-moon', getComputedStyle(document.documentElement).getPropertyValue('--icon-sun-dark'));
+          document.documentElement.style.setProperty('--main-icon-close', getComputedStyle(document.documentElement).getPropertyValue('--icon-close-dark'));
           document.documentElement.style.setProperty('--main-shadow', getComputedStyle(document.documentElement).getPropertyValue('--shadow-light'));
         }
       },
       getCurrentTime() {
         let $this = this;
         function getTime () {
-          console.log("getTime")
           const today = new Date();
           const time = (today.getHours() < 10 ? '0' : '') + today.getHours() + ":" + (today.getMinutes() < 10 ? '0' : '') + today.getMinutes();
           $this.currentTime = time;
         }
         getTime();
-        setInterval(() => getTime(), 10000);//10 sec
+        setInterval(() => getTime(), 1000);//1 sec
       },
       displayHistory() {
         store.isHistory = !this.isHistory;
@@ -211,6 +207,8 @@
     --icon-history-dark: url("assets/icons/main-icons/history_dark.png");
     --icon-list-light: url("assets/icons/main-icons/list_light.png");
     --icon-list-dark: url("assets/icons/main-icons/list_dark.png");
+    --icon-close-light: url("assets/icons/main-icons/close_light.png");
+    --icon-close-dark: url("assets/icons/main-icons/close_dark.png");
 
     //main values
     --main-background: var(--background-light);
@@ -224,6 +222,7 @@
     --main-icon-sun-moon: var(--icon-sun-dark);
     --main-icon-history: var(--icon-history-dark);
     --main-icon-order: var(--icon-list-dark);
+    --main-icon-close: var(--icon-close-dark);
   }
 
   html,body{

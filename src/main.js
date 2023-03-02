@@ -12,6 +12,7 @@ import 'bootstrap-vue/dist/bootstrap-vue.css'
 
 //v-ripple
 import Ripple from 'vue-ripple-directive'
+Ripple.zIndex = 55;
 Vue.directive('ripple', Ripple);
 
 import VueConstants from 'vue-constants'
