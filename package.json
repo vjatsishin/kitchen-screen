@@ -37,7 +37,6 @@
         "vue-swatches": "^1.0.4",
         "vue-tel-input": "^3.0.0",
         "vuejs-localization": "^1.0.3",
-        "vuex": "^3.6.2",
         "webstomp-client": "^1.2.6"
     },
     "devDependencies": {

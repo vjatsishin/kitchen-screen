@@ -1,31 +1,39 @@
 <template>
   <div id="app">
-
     <!-- <SettingsDialog v-if="isSettingsDialog && appType && !isFirstStart" @onClose="onSettingsClose"/> && isAuthenticated && isInited -->
-
     <!-- <InfoDialog v-if="isFirstStart" @onClose="isFirstStart = false"/> -->
-    
+  
     <div>
       <div class="hat">
         <div class="hat-history" @click="displayHistory()">
-          <template v-if="!isHistory">
+          <!-- <template v-if="!!isHistory">
             <div class="hat-history-img"/>
-            <div>История</div>
-          </template>
-          <template v-else-if="isHistory">
+            <div>Історія</div>
+          </template> -->
+          <template>
             <div class="hat-order-img"/>
-            <div>Заказы</div>
+            <div>Замовлення</div>
           </template>
         </div>
 
-        <!-- <div @click="sendTestJson()">
-          send test json
-        </div> -->
+        <div class="hat-workshop">
+            Цех:&nbsp;
+            <select class="theme-select" v-model="currentWorkshop">
+                <option v-for="(workshop, index) in workshops" :value="workshop.id" :key="index">{{workshop.name}}</option>
+            </select>
+        </div>
+
+        <div class="hat-category">
+            Категорія:&nbsp;
+            <select class="theme-select" v-model="currentCategory">
+                <option v-for="(category, index) in categories" :value="category.id" :key="index">{{category.name}}</option>
+            </select>
+        </div>
 
         <div class="hat-right">
           <div class="hat-dark-light" @click="changeTheme()">
             <div class="hat-dark-light-img"/>
-            <div v-if="currentTheme == 'dark'">Ночь</div>
+            <div v-if="currentTheme == 'dark'">Ніч</div>
             <div v-else>День</div>
           </div>
           <div class="hat-current-time">
@@ -45,25 +53,13 @@
 <script>
   import Vue from 'vue'  
   import Kitchen from './components/kitchen/Kitchen'
-
   import { handleResize } from "@/main.js";
-
-  import axios from 'axios';
   import { store } from "@/store/store.js";
   import { setTimeout } from 'timers';
-
-  import { webviewCheck } from '@/components/webviewCheck.js';
-
   import getUserLocale from 'get-user-locale';
   const userLocale = getUserLocale();
-
   import { languages } from './locale/index.js'
-
   const vm = new Vue()
-
-  // const ws1 = new WebSocket('ws://localhost:8082/inner-ws');
-
-  var stompClient = null;
 
   export default {
     components: {
@@ -72,18 +68,29 @@
     data(){
       return {
         time:0,
-        currentTheme:"light", //dark||light
         currentTime:"00:00",
+        currentWorkshop: "",
+        currentCategory: "",
+        // workshops: [
+        //   {id:"", name: "Всі"},
+        //   {id:"1", name: "Бар"},
+        //   {id:"2", name: "Кухня"}
+        // ],
+        // categories: [
+        //   {id:"", name: "Всі"},
+        //   {id:"1", name: "Напої"},
+        //   {id:"2", name: "Страви"}
+        // ]
       }
     },
     created(){
       var $this = this;
-      // console.log("this.isFirstStart", this.isFirstStart)
-      // if(this.isFirstStart === null) {
-      //   this.isFirstStart = true;
-      // }
-      // console.log("this.isFirstStart", this.isFirstStart)
-
+      store.theme = localStorage.getItem("theme");
+      store.workshops = JSON.parse(localStorage.getItem("workshops"))
+      store.categories = JSON.parse(localStorage.getItem("categories"))
+      this.currentWorkshop = localStorage.getItem("selectedWorkshop") || ""
+      this.currentCategory = localStorage.getItem("selectedCategory") || ""
+      
       store.window.width = window.innerWidth;
       store.window.height = window.innerHeight;
       window.addEventListener('resize',this.handleResize);
@@ -105,26 +112,48 @@
     },
     mounted(){
       // var $this = this;
+      this.setTheme();
     },
     computed: {
       isHistory() {
         return store.isHistory;
+      },
+      currentTheme() {
+        return store.theme;
+      },
+      workshops() {
+        let all = [{'id': "", 'name': "Всі"}]
+        return [...all||[], ...store.workshops||[]]
+      },
+      categories() {
+        let all = [{'id': "", 'name': "Всі"}]
+        return [...all||[], ...store.categories||[]]
+
       }
     },
+    watch: {
+      currentWorkshop: function (val, oldVal) {
+        store.workshop = val;
+        localStorage.setItem("selectedWorkshop", val)
+      },
+      currentCategory: function (val, oldVal) {
+        store.category = val;
+        localStorage.setItem("selectedCategory", val)
+      },
+    },
     methods:{
-      // sendTestJson() {
-      //   // ws1.send(JSON.stringify({'command':'cancel_order'}))
-      //   stompClient.send("/kitchen-screen/terminal/cancel", {}, "1");
-      // },
       changeTheme() {
         if(this.currentTheme == "dark") {
-          this.currentTheme = "light"
+          localStorage.setItem("theme", "light")
+          store.theme = "light"
         } else {
-          this.currentTheme = "dark"
+          localStorage.setItem("theme", "dark")
+          store.theme = "dark"
         }
         this.setTheme();
       },
       setTheme() {
+        console.log("setTheme", this.currentTheme)
         if(this.currentTheme == "dark") {
           document.documentElement.style.setProperty('--main-background', getComputedStyle(document.documentElement).getPropertyValue('--background-dark'));
           document.documentElement.style.setProperty('--main-background-hat', getComputedStyle(document.documentElement).getPropertyValue('--background-hat-dark'));
@@ -136,8 +165,9 @@
           document.documentElement.style.setProperty('--main-icon-order', getComputedStyle(document.documentElement).getPropertyValue('--icon-list-light'));
           document.documentElement.style.setProperty('--main-icon-sun-moon', getComputedStyle(document.documentElement).getPropertyValue('--icon-moon-light'));
           document.documentElement.style.setProperty('--main-icon-close', getComputedStyle(document.documentElement).getPropertyValue('--icon-close-light'));
+          document.documentElement.style.setProperty('--main-reversed-icon-close', getComputedStyle(document.documentElement).getPropertyValue('--icon-close-dark'));
           document.documentElement.style.setProperty('--main-shadow', getComputedStyle(document.documentElement).getPropertyValue('--shadow-dark'));
-          
+          document.documentElement.style.setProperty('--main-icon-select', getComputedStyle(document.documentElement).getPropertyValue('--icon-select-light'));
         } else {//light
           document.documentElement.style.setProperty('--main-background', getComputedStyle(document.documentElement).getPropertyValue('--background-light'));
           document.documentElement.style.setProperty('--main-background-hat', getComputedStyle(document.documentElement).getPropertyValue('--background-hat-light'));
@@ -149,7 +179,9 @@
           document.documentElement.style.setProperty('--main-icon-order', getComputedStyle(document.documentElement).getPropertyValue('--icon-list-dark'));
           document.documentElement.style.setProperty('--main-icon-sun-moon', getComputedStyle(document.documentElement).getPropertyValue('--icon-sun-dark'));
           document.documentElement.style.setProperty('--main-icon-close', getComputedStyle(document.documentElement).getPropertyValue('--icon-close-dark'));
+          document.documentElement.style.setProperty('--main-reversed-icon-close', getComputedStyle(document.documentElement).getPropertyValue('--icon-close-light'));
           document.documentElement.style.setProperty('--main-shadow', getComputedStyle(document.documentElement).getPropertyValue('--shadow-light'));
+          document.documentElement.style.setProperty('--main-icon-select', getComputedStyle(document.documentElement).getPropertyValue('--icon-select-dark'));
         }
       },
       getCurrentTime() {
@@ -209,6 +241,8 @@
     --icon-list-dark: url("assets/icons/main-icons/list_dark.png");
     --icon-close-light: url("assets/icons/main-icons/close_light.png");
     --icon-close-dark: url("assets/icons/main-icons/close_dark.png");
+    --icon-select-dark: url("data:image/svg+xml;utf8,<svg fill='black' height='10' width='10' viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path d='M505.755,123.592c-8.341-8.341-21.824-8.341-30.165,0L256.005,343.176L36.421,123.592c-8.341-8.341-21.824-8.341-30.165,0s-8.341,21.824,0,30.165l234.667,234.667c4.16,4.16,9.621,6.251,15.083,6.251c5.462,0,10.923-2.091,15.083-6.251l234.667-234.667C514.096,145.416,514.096,131.933,505.755,123.592z'/></svg>");
+    --icon-select-light: url("data:image/svg+xml;utf8,<svg fill='white' height='10' width='10' viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path d='M505.755,123.592c-8.341-8.341-21.824-8.341-30.165,0L256.005,343.176L36.421,123.592c-8.341-8.341-21.824-8.341-30.165,0s-8.341,21.824,0,30.165l234.667,234.667c4.16,4.16,9.621,6.251,15.083,6.251c5.462,0,10.923-2.091,15.083-6.251l234.667-234.667C514.096,145.416,514.096,131.933,505.755,123.592z'/></svg>");
 
     //main values
     --main-background: var(--background-light);
@@ -223,6 +257,8 @@
     --main-icon-history: var(--icon-history-dark);
     --main-icon-order: var(--icon-list-dark);
     --main-icon-close: var(--icon-close-dark);
+    --main-reversed-icon-close: var(--icon-close-light);
+    --main-icon-select: var(--icon-select-light);
   }
 
   html,body{
@@ -250,7 +286,8 @@
   }
 
   #app {
-    font-family: 'Avenir', Helvetica, Arial, sans-serif;
+    // font-family: 'Avenir', Helvetica, Arial, sans-serif;
+    font-family: Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* text-align: center; */
@@ -269,7 +306,7 @@
     display:flex;
     flex-direction:row;
     width: 100%;
-    height: 40px;
+    height: 70px;
     background-color: var(--main-background-hat);//#484848;
     box-shadow: 0px 1px 3px var(--main-shadow)// #A9A9A9;
   }
@@ -297,19 +334,59 @@
     background: var(--main-icon-order) center/cover;
   }
 
-  .hat-right {
-    position: absolute;
-    right: 0;
-    display:flex;
-    flex-direction:row;
-    margin: 0 18px 0 0;
+  .hat-workshop {
+    cursor:pointer;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 0 0 0 18px;
+    font-size: 18px;
+    color: var(--main-background-product-text);
   }
+
+  .hat-category {
+    cursor:pointer;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 0 0 0 18px;
+    font-size: 18px;
+    color: var(--main-background-product-text);
+  }
+
+  .theme-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: transparent;
+    background-image: var(--main-icon-select);
+    background-repeat: no-repeat;
+    background-position-x: 100%;
+    background-position-y: 18px;
+    padding: 10px 20px 10px 0;
+    border: none;
+    color: var(--main-background-product-text);
+    cursor: pointer;
+  }
+
+  .theme-select option {
+    color: black;
+  }
+
+  .hat-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 0 18px 0 auto;
+  }
+
   .hat-dark-light {
     cursor:pointer;
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin: 0 8px 0 0;
+    width: 70px;
+    // margin: 0 8px 0 0;
     color: var(--main-background-product-text);
   }
 
@@ -324,7 +401,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin: 0 0 0 18px;
+    margin-left: 12px;
     color: var(--main-background-product-text);
   }
 
@@ -334,30 +411,6 @@
     height: 100%;
   }
 
-  /* .hat:hover {
-    opacity: 1;
-  } */
-
-  /* @keyframes hatOpacity {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  } */
-
-  .menu {
-    /* margin: 0.25rem; */
-  }
-
-  /* .settings {
-    width: 35px;
-    height: 35px;
-    margin: 0.5rem 0.8rem 0px 0px;
-    float: right;
-  } */
-
   .user {
     width: 35px;
     height: 35px;
@@ -365,39 +418,12 @@
     float: right;
   }
 
-  /* .background {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-  } */
-
-  /* .connection-status {
-    margin: 0.5rem 0.8rem 0px 0px;
-    float: right;
-
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background-color: #424242;
-    box-shadow: 0px 1px 3px;
-  } */
-
   .board {
-    /* width: 70rem; */
-    /* width: calc(100% - 200px); */
-    /* height: calc(100vh - 250px); */
     position: absolute;
-    top:40px;
+    top:70px;
     padding-top:6px;
-    height: calc(100vh - 40px);
+    height: calc(100vh - 70px);
     width:100%;
-    /* width:100vw; */
-    /* min-width: 20rem; */
-    /* margin: 3.5rem auto 0px; */
-    /* padding: 100px auto; */
-    
-    display: flex;
-    justify-content: space-between;
   }
 
   .cooking-list {

@@ -1,8 +1,8 @@
 import Vue from 'vue'
 import App from './App.vue'
 
-import Vuex from 'vuex';
-Vue.use(Vuex);
+// import Vuex from 'vuex';
+// Vue.use(Vuex);
 
 // import store from './store/store'
 import BootstrapVue from 'bootstrap-vue'
